@@ -542,7 +542,7 @@ function listenOnAvailablePort(candidate) {
   };
 
   server.once("error", handleListenError);
-  server.listen(candidate, "127.0.0.1", () => {
+  server.listen(candidate, "0.0.0.0", () => {
     server.removeListener("error", handleListenError);
     console.log(`SafeRoute is available at http://127.0.0.1:${candidate}`);
   });
