@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#071827">
+    <title>Dispatch — SafeRoute Hyderabad</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="/map.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+    <script src="/app.js" defer></script>
+  </head>
+  <body class="dispatch-page">
+    <header class="topbar">
+      <a class="brand" href="/app"><span class="brand-mark">+</span><span>safe<span class="brand-accent">route</span></span></a>
+      <div class="city-label"><span class="pulse"></span><span>HYDERABAD DISPATCH</span><i></i><span>LIVE ROAD NETWORK</span></div>
+      <div class="user-area">
+        <button id="profile-button" class="profile-button" type="button"
+                aria-expanded="false" aria-controls="profile-menu">
+          <span class="user-avatar">SR</span><span id="user-name">Dispatcher</span><span class="profile-chevron">⌄</span>
+        </button>
+        <div id="profile-menu" class="profile-menu" hidden>
+          <div class="profile-menu-heading"><span class="section-label">SIGNED IN</span><strong id="profile-menu-name">Dispatcher</strong><span id="profile-menu-email"></span></div>
+          <button type="button" data-profile-action="profile">Profile & account</button>
+          <button type="button" data-profile-action="settings">Preferences & settings</button>
+          <details class="help-menu"><summary>Help & about</summary><p>Choose two modeled locations, then select a recommended route. Road incidents are simulated; road times are illustrative and are not live traffic data. SafeRoute uses a C adjacency-list graph, a binary min-heap, Dijkstra's algorithm, and Yen-style alternative path generation.</p></details>
+          <button id="logout-button" class="logout-option" type="button">Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="dispatch-layout">
+      <aside class="sidebar">
+        <div class="sidebar-heading">
+          <div class="eyebrow">EMERGENCY RESPONSE <span class="live-badge"><i></i> READY</span></div>
+          <h1>Find the<br><span>fastest way.</span></h1>
+          <p>Plan a route across Hyderabad. If a road closes, C-powered routing finds another.</p>
+        </div>
+
+        <section class="route-card" aria-labelledby="route-title">
+          <div class="card-title-row">
+            <div><div class="section-label">ROUTE PLANNER</div><h2 id="route-title">Dispatch a unit</h2></div>
+            <span class="algorithm-chip">C · YEN + DIJKSTRA</span>
+          </div>
+          <form id="route-form">
+            <label class="select-field"><span>FROM</span><select id="source" required></select></label>
+            <button id="swap-button" class="swap-button" type="button" aria-label="Swap start and destination">↕</button>
+            <label class="select-field"><span>TO</span><select id="destination" required></select></label>
+            <div class="route-preferences">
+              <label class="select-field"><span>ROUTE PRIORITY</span><select id="route-preference"><option value="fastest">Fastest available</option><option value="shortest">Shortest distance</option></select></label>
+              <label class="select-field"><span>RESPONSE LEVEL</span><select id="emergency-priority"><option value="standard">Standard</option><option value="critical">Critical</option></select></label>
+            </div>
+            <label class="select-field route-mode-field"><span>ROUTING MODE</span><select id="route-mode"><option value="standard">Standard routing</option><option value="ambulance">Ambulance emergency mode</option></select></label>
+            <p class="ambulance-mode-note">Ambulance mode applies stronger simulated accident/congestion penalties. Blocked roads remain unavailable. This is not live traffic or real dispatch.</p>
+            <button id="route-button" class="route-button" type="submit"><span>Find best routes</span><b>→</b></button>
+          </form>
+          <p id="route-message" class="route-message" role="status" aria-live="polite">Choose a start and destination.</p>
+          <div id="route-options" class="route-options" aria-label="Available routes"></div>
+          <div id="route-summary" class="route-summary" hidden>
+            <div class="summary-stats">
+              <div><strong id="travel-time">—</strong><span>MIN EST.</span></div>
+              <i></i>
+              <div><strong id="distance">—</strong><span>KM APPROX.</span></div>
+              <span id="route-status" class="route-status">RECOMMENDED</span>
+            </div>
+            <div id="route-endpoints" class="route-endpoints"></div>
+            <div class="route-divider"></div>
+            <div id="route-steps" class="route-steps"></div>
+            <p class="estimate-note">Travel times are simulated estimates, not live traffic data.</p>
+          </div>
+        </section>
+
+        <section class="facility-section">
+          <div class="section-label">EMERGENCY FACILITIES</div>
+          <div class="facility-row">
+            <label class="select-field"><span>FACILITY TYPE</span><select id="facility-type"><option value="hospital">Hospital</option><option value="police">Police station</option><option value="fire">Fire station</option></select></label>
+            <button id="nearest-facility-button" type="button">Nearest</button>
+          </div>
+          <p class="facility-note">Only named hospitals in the modeled network can be routed to; police/fire station locations are not included.</p>
+        </section>
+
+        <section class="search-section" aria-label="Location search">
+          <div class="section-label">EXPLORE THE CITY</div>
+          <div class="location-search">
+            <span aria-hidden="true">⌕</span>
+            <input id="location-search" type="search" list="location-options" placeholder="Search Hyderabad locations…" autocomplete="off">
+            <datalist id="location-options"></datalist>
+            <button id="search-button" type="button" aria-label="Find location">↵</button>
+          </div>
+        </section>
+
+        <section class="roads-section">
+          <div class="roads-heading">
+            <div><div class="section-label">NETWORK CONTROL</div><h2>Road conditions</h2></div>
+            <span id="road-count" class="road-count">— ROADS</span>
+          </div>
+          <p class="roads-hint">Simulate a block, accident, or congestion. Every change recalculates routes.</p>
+          <label class="road-filter"><span>⌕</span><input id="road-filter" type="search" placeholder="Filter roads…" autocomplete="off"></label>
+          <div class="road-legend"><span><i class="legend-open"></i> NORMAL</span><span><i class="legend-incident"></i> INCIDENT</span><span><i class="legend-blocked"></i> BLOCKED</span></div>
+          <div id="road-list" class="road-list" aria-live="polite"></div>
+        </section>
+        <div class="sidebar-disclaimer"><span>ⓘ</span> DEMONSTRATION NETWORK — NOT FOR LIVE EMERGENCIES</div>
+      </aside>
+
+      <section class="map-area" aria-label="Interactive Hyderabad map">
+        <div class="map-toolbar">
+          <div class="map-title"><span class="map-pin">⌖</span><div><strong>Hyderabad, Telangana</strong><span>17.3850° N · 78.4867° E</span></div></div>
+          <div class="map-key" aria-label="Map legend">
+            <span><i class="key-start">S</i> START</span>
+            <span><i class="key-destination">D</i> DESTINATION</span>
+            <span><i class="key-route"></i> FASTEST ROUTE</span>
+            <span><i class="key-alternate"></i> ALTERNATE</span>
+            <span><i class="key-blocked"></i> BLOCKED</span>
+          </div>
+          <div class="map-actions">
+            <span class="map-layer-label"><i></i> OPENSTREETMAP</span>
+            <button id="locate-button" type="button" title="Use my current location" aria-label="Use my current location">◎ <span>My location</span></button>
+          </div>
+        </div>
+        <div id="city-map" role="application" aria-label="OpenStreetMap of Hyderabad with emergency locations and route network"></div>
+        <div id="map-toast" class="map-toast" role="status" aria-live="polite"></div>
+        <div class="map-attribution-note">Map data © OpenStreetMap contributors · Road times are illustrative</div>
+      </section>
+    </main>
+    <div id="settings-backdrop" class="settings-backdrop" hidden>
+      <section id="settings-panel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div class="settings-heading"><div><div class="section-label">SAFEROUTE ACCOUNT</div><h2 id="settings-title">Profile & settings</h2></div><button id="settings-close" type="button" aria-label="Close settings">×</button></div>
+        <form id="profile-form" class="settings-group">
+          <h3>Profile</h3>
+          <label class="settings-field">Name<input id="profile-name" name="name" required minlength="2" maxlength="48"></label>
+          <label class="settings-field">Email<input id="profile-email" name="email" type="email" required maxlength="254"></label>
+          <button class="settings-save" type="submit">Save profile</button>
+        </form>
+        <form id="preferences-form" class="settings-group">
+          <h3>Settings</h3>
+          <label class="settings-field">Appearance<select id="appearance-setting"><option value="light">Light</option><option value="dark">Dark</option></select></label>
+          <label class="settings-field">Default map view<select id="map-view-setting"><option value="network">Road network</option><option value="city">Whole city</option></select></label>
+          <label class="settings-check"><input id="show-hospitals-setting" type="checkbox"> Show hospitals on map</label>
+          <label class="settings-check"><input id="show-roads-setting" type="checkbox"> Show modeled roads on map</label>
+          <label class="settings-check"><input id="notify-incidents-setting" type="checkbox"> Notify on simulated incidents</label>
+          <h3>Emergency preferences</h3>
+          <label class="settings-field">Preferred facility<select id="preferred-facility-setting"><option value="hospital">Hospital</option><option value="police">Police station</option><option value="fire">Fire station</option></select></label>
+          <label class="settings-field">Routing preference<select id="preferred-route-setting"><option value="fastest">Fastest available</option><option value="shortest">Shortest distance</option></select></label>
+          <label class="settings-field">Response level<select id="preferred-priority-setting"><option value="standard">Standard</option><option value="critical">Critical</option></select></label>
+          <button class="settings-save" type="submit">Save settings</button>
+        </form>
+        <p class="settings-footnote">Route and incident values are modeled for demonstration, not live traffic or emergency-service dispatch.</p>
+      </section>
+    </div>
+  </body>
+</html>
